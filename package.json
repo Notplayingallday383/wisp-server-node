@@ -1,0 +1,21 @@
+{
+  "name": "wisp-server-node",
+  "version": "1.0.0",
+  "description": "The Wisp protocol implementation in NodeJS",
+  "main": "index.js",
+  "git": "https://github.com/Notplayingallday383/wisp-server-node",
+  "scripts": {
+    "start": "node ."
+  },
+  "author": "XSTARS",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "fs": "^0.0.1-security",
+    "http": "^0.0.1-security",
+    "mime-types": "^2.1.35",
+    "path": "^0.12.7",
+    "tsc": "^2.0.4",
+    "websocket": "^1.0.34",
+    "ws": "^8.16.0"
+  }
+}
