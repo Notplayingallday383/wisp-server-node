@@ -51,7 +51,7 @@ class WSProxyConnection {
     while (true) {
       const data = await this.tcpReader.read(tcpSize);
       if (data.length === 0) {
-        break; // socket closed
+        break; 
       }
       await this.ws.send(data);
     }
@@ -67,7 +67,6 @@ class WispConnection {
     this.activeStreams = {};
   }
 
-  // send the initial CONTINUE packet
   async setup() {
     const continuePayload = struct.pack(continueFormat, queueSize);
     const continuePacket = struct.pack(packetFormat, 0x03, 0) + continuePayload;
@@ -79,7 +78,6 @@ class WispConnection {
     const hostname = payload.slice(3).toString();
 
     if (streamType !== 1) {
-      // UDP not supported yet
       await this.sendClosePacket(streamId, 0x41);
       this.closeStream(streamId);
       return;
@@ -115,7 +113,6 @@ class WispConnection {
   }
 
   async streamWsToTcp(streamId) {
-    // this infinite loop should get killed by the task.cancel call later on
     while (true) {
       const stream = this.activeStreams[streamId];
       const data = await stream.queue.get();
@@ -126,7 +123,6 @@ class WispConnection {
         break;
       }
 
-      // send a CONTINUE packet periodically
       stream.packetsSent += 1;
       if (stream.packetsSent % (queueSize / 4) === 0) {
         const bufferRemaining = stream.queue.maxsize - stream.queue.qsize();
@@ -142,7 +138,6 @@ class WispConnection {
       const stream = this.activeStreams[streamId];
       const data = await stream.reader.read(tcpSize);
       if (data.length === 0) {
-        // connection closed
         break;
       }
       const dataPacket = struct.pack(packetFormat, 0x02, streamId) + data;
@@ -164,12 +159,11 @@ class WispConnection {
 
   closeStream(streamId) {
     if (!this.activeStreams[streamId]) {
-      return; // stream already closed
+      return;
     }
     const stream = this.activeStreams[streamId];
     this.closeTcp(stream.writer);
 
-    // kill the running tasks associated with this stream
     if (!stream.connectTask.done()) {
       stream.connectTask.cancel();
     }
@@ -201,12 +195,10 @@ class WispConnection {
         break;
       }
 
-      // get basic packet info
       const payload = data.slice(5);
       const [packetType, streamId] = data.slice(0, 5).unpack(packetFormat);
 
       if (packetType === 0x01) {
-        // CONNECT packet
         const connectTask = asyncio.createTask(this.taskWrapper(this.newStream, streamId, payload));
         this.activeStreams[streamId] = {
           reader: null,
@@ -218,20 +210,17 @@ class WispConnection {
           packetsSent: 0,
         };
       } else if (packetType === 0x02) {
-        // DATA packet
         const stream = this.activeStreams[streamId];
         if (!stream) {
           continue;
         }
         await stream.queue.put(payload);
       } else if (packetType === 0x04) {
-        // CLOSE packet
         const reason = payload.unpack(closeFormat)[0];
         this.closeStream(streamId);
       }
     }
 
-    // close all active streams when the websocket disconnects
     for (const streamId of Object.keys(this.activeStreams)) {
       this.closeStream(parseInt(streamId, 10));
     }
